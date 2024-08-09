@@ -5,7 +5,7 @@ from .managers import CustomUserManager
 
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
-    user_id = models.AutoField(primary_key=True)
+    id = models.AutoField(primary_key=True)
     email = models.EmailField(unique=True)
     user_name = models.CharField(max_length=20, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -36,3 +36,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+    class Meta:
+        db_table = 'user'
