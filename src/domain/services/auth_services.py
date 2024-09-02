@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from domain.services.token_services import create_user_tokens
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import NoResultFound, MultipleResultsFound
+from sqlalchemy.exc import NoResultFound, MultipleResultsFound, IntegrityError
 from sqlalchemy import select
 
 from config import Settings
@@ -15,10 +15,10 @@ def validate_unique(type: str, value: str, db: Session):
     # value는 요청하고자 하는 데이터 값
     user_attr = getattr(User, type)
 
-    stmt = select(User).filter(user_attr == value)
+    stmt = select(User).where(user_attr == value)
     try:
         v = db.execute(stmt).scalar_one_or_none()
-        if v is not None:
+        if v is not None:  # 새로 추가할 데이터이기에 db에 존재한다면
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"{type} already exists"
@@ -68,7 +68,7 @@ def register(request, db: Session):
 
 
 def login(request, db: Session):
-    stmt = select(User).filter(User.email == request.email)
+    stmt = select(User).where(User.email == request.email)
     try:
         user = db.execute(stmt).scalar_one()
     except NoResultFound:
@@ -80,11 +80,7 @@ def login(request, db: Session):
     is_valid = Settings.PWD_CONTEXT.verify(request.password, user.password)
 
     user_info_required = False
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User is not exists"
-        )
+
     if not is_valid:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -108,3 +104,80 @@ def login(request, db: Session):
                 "email": user.email
             }
         }
+
+
+def set_password(user_id, request, db: Session):
+    stmt = select(User).where(User.id == user_id)
+    try:
+        user = db.execute(stmt).scalar_one
+    except NoResultFound:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not exists"
+        )
+
+    if request.old_password != request.confirm_old_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The entered passwords do not match"
+        )
+    try:
+        is_valid = Settings.PWD_CONTEXT.verify(request.old_password, user.password)
+
+        if not is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Password is invalid"
+            )
+        else:
+            user.password = Settings.PWD_CONTEXT.hash(request.new_password)
+
+        user.updated_at = datetime.now(timezone.utc) + timedelta(hours=9)
+
+        db.flush()
+
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            detail=f"Integrity Error occurred during update the item.: {str(e)}")
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"Unexpected error occurred during update: {str(e)}")
+    else:
+        db.commit()
+        db.refresh(user)
+        return user
+
+
+def reset_password(user_id, request, db: Session):
+    stmt = select(User).where(User.id == user_id)
+
+    try:
+        user = db.execute(stmt).scalar_one
+    except NoResultFound:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not exists"
+        )
+
+    try:
+        user.password = Settings.PWD_CONTEXT.hash(request.new_password)
+        user.updated_at = datetime.now(timezone.utc) + timedelta(hours=9)
+
+        db.flush()
+
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            detail=f"Integrity Error occurred during update the item.: {str(e)}")
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"Unexpected error occurred during update: {str(e)}")
+    else:
+        db.commit()
+        db.refresh(user)
+        return user

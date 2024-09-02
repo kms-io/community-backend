@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
@@ -11,7 +11,7 @@ from domain.services.auth_services import validate_unique
 
 
 def get_user(user_id, db: Session):
-    stmt = select(User).filter(User.id == user_id)
+    stmt = select(User).where(User.id == user_id)
 
     try:
         user = db.execute(stmt).scalar_one()
@@ -33,22 +33,19 @@ def update_user(user_id, request, db: Session):
     user = get_user(user_id, db)
 
     try:
-        if validate_unique("email", request.email, db):
+        if validate_unique("email", request.email, db) and request.email is not None:  # request.email이 존재하고
             user.email = request.email
-        if validate_unique("user_name", request.user_name, db):
+        if validate_unique("user_name", request.user_name, db) and request.user_name is not None:  # request.user_name이 존재하고
             user.user_name = request.user_name
-        is_valid = Settings.PWD_CONTEXT.verify(user.password, request.password)
-        if is_valid:
-            user.password = Settings.PWD_CONTEXT.hash(request.password)
 
-        user.updated_at = datetime.now(datetime.UTC)
+        user.updated_at = datetime.now(timezone.utc) + timedelta(hours=9)
 
         db.flush()
 
     except IntegrityError as e:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                            detail=f"Integrity Error occurred during update the new Loan item.: {str(e)}")
+                            detail=f"Integrity Error occurred during update the item.: {str(e)}")
 
     except Exception as e:
         db.rollback()

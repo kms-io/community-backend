@@ -15,8 +15,8 @@ class TokenResponse(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    email: str = Field(..., example="test@test.com")
-    password: str = Field(..., example="qwerty123")
+    email: str = Field(example="test@test.com")
+    password: str = Field(example="qwerty123")
 
 
 class LoginResponse(BaseModel):
@@ -26,11 +26,21 @@ class LoginResponse(BaseModel):
 
 
 class RegisterRequest(BaseModel):
-    user_name: str = Field(..., example="테스트")
-    email: EmailStr = Field(..., example="test@test.com")
-    password: str = Field(..., example="qwerty123")
+    user_name: str = Field(example="테스트")
+    email: EmailStr = Field(example="test@test.com")
+    password: str = Field(example="qwerty123")
 
 
 class RegisterResponse(BaseModel):
     token: TokenResponse = None
     user: UserInfo = None
+
+
+class SetPasswordRequest(BaseModel):
+    old_password: str = Field(example="qwerty123")
+    confirm_old_password: str = Field(example="qwerty123")
+    new_password: str = Field(example="qwerty12345")
+
+
+class ResetPasswordRequest(BaseModel):
+    new_password: str = Field(example="qwerty")
