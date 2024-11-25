@@ -1,10 +1,9 @@
 import os
-
-from dotenv import load_dotenv
-from pydantic_settings import BaseSettings
-from passlib.context import CryptContext
 from typing import ClassVar
 
+from dotenv import load_dotenv
+from passlib.context import CryptContext
+from pydantic_settings import BaseSettings
 
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 load_dotenv(dotenv_path)
@@ -29,7 +28,7 @@ class Settings(BaseSettings):
 
     @property
     def DATABASE_URL(self):
-        return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        return f"mysql+aiomysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
 
 settings = Settings()

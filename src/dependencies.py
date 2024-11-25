@@ -1,20 +1,22 @@
 from datetime import date
+from typing import AsyncGenerator
 
 from fastapi import Depends, Header, HTTPException, status
 from jose import jwt
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
+from config import Settings
 from database import get_db_session
 from repositories.models import User
-from config import Settings
 
 
-def get_db():
-    try:
-        session = get_db_session()
-        yield session
-    finally:
-        session.close()
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    async for session in get_db_session():
+        try:
+            yield session
+        finally:
+            await session.close()
 
 
 async def get_current_user(token=Header(None), db: Session = Depends(get_db)):

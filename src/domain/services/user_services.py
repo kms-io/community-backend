@@ -1,13 +1,13 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError, NoResultFound
+from sqlalchemy.orm import Session
 
 from config import Settings
-from repositories.models import User
 from domain.services.auth_services import validate_unique
+from repositories.models import User
 
 
 def get_user(user_id, db: Session):
@@ -15,16 +15,18 @@ def get_user(user_id, db: Session):
 
     try:
         user = db.execute(stmt).scalar_one()
+
     except NoResultFound:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
-        )
+        ) from None
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Unexpected error occurred during retrieve: {str(e)}"
-        )
+        ) from e
 
     return user
 
