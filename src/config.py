@@ -20,11 +20,11 @@ class Settings(BaseSettings):
 
     PWD_CONTEXT: ClassVar[CryptContext] = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-    DB_HOST: str = os.getenv("EXP_DB_HOST")
-    DB_PORT: int = int(os.getenv("EXP_DB_PORT"))
-    DB_NAME: str = os.getenv("EXP_DB_NAME")
-    DB_USER: str = os.getenv("EXP_DB_USER")
-    DB_PASSWORD: str = os.getenv("EXP_DB_PASSWORD")
+    DB_HOST: str = os.getenv("EXP_DB_HOST", "localhost")
+    DB_PORT: int = int(os.getenv("EXP_DB_PORT", 3306))
+    DB_NAME: str = os.getenv("EXP_DB_NAME", "prod_db")
+    DB_USER: str = os.getenv("EXP_DB_USER", "root")
+    DB_PASSWORD: str = os.getenv("EXP_DB_PASSWORD", "1235")
 
     @property
     def DATABASE_URL(self):
