@@ -1,13 +1,14 @@
-from datetime import date
 from typing import AsyncGenerator
 
 from fastapi import Depends, Header, HTTPException, status
 from jose import jwt
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from config import Settings
 from database import get_db_session
+from exceptions import InactiveUserException
 from repositories.models import User
 
 
@@ -29,7 +30,7 @@ async def get_current_user(token=Header(None), db: Session = Depends(get_db)):
     user_id: int = int(payload.get("sub"))
     if user_id is None:
         raise credentials_exception
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
 
     if user is None:
         raise credentials_exception
@@ -40,8 +41,5 @@ async def get_current_user(token=Header(None), db: Session = Depends(get_db)):
 
 def get_current_active_user(user: User = Depends(get_current_user)):
     if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Inactive user"
-        )
+        raise InactiveUserException()
     return user
