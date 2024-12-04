@@ -164,3 +164,4 @@ cython_debug/
 .vscode/
 alembic.ini
 .env
+.DS_Store
