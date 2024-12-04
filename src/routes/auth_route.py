@@ -52,7 +52,7 @@ async def login(
 
 @router.put(
     "/set-password",
-    responsse_model=auth_schemas.UserInfo,
+    response_model=auth_schemas.UserInfo,
     status_code=status.HTTP_200_OK,
     summary="사용자 비밀번호 재설정",
     description="""사용자 비밀번호 재설정""",
