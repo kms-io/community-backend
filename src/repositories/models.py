@@ -1,8 +1,8 @@
-from sqlalchemy import (TIMESTAMP, Boolean, Column, Integer, String)
+from sqlalchemy import TIMESTAMP, Boolean, Column, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-from .base import Base
+from repositories.base import Base
 
 
 class User(Base):
