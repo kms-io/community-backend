@@ -4,6 +4,7 @@ from jose import jwt
 
 from config import Settings
 
+settings = Settings()
 
 def create_jwt(
     data: dict,
@@ -23,7 +24,7 @@ def create_jwt(
 
 
 def create_user_tokens(user_id: int) -> dict:
-    access_token_expires = timedelta(minutes=Settings().JWT_ACCESS_EXPIRATION_TIME_MINUTES)
+    access_token_expires = timedelta(minutes=settings.JWT_ACCESS_EXPIRATION_TIME_MINUTES)
     access_token = create_jwt(
         data={"sub": str(user_id)},
         secret_key=Settings().JWT_SECRET_KEY,
@@ -31,7 +32,7 @@ def create_user_tokens(user_id: int) -> dict:
         expires_delta=access_token_expires
     )
 
-    refresh_token_expires = timedelta(days=Settings().JWT_REFRESH_EXPIRATION_TIME_DAYS)
+    refresh_token_expires = timedelta(days=settings.JWT_REFRESH_EXPIRATION_TIME_DAYS)
     refresh_token = create_jwt(
         data={"sub": str(user_id)},
         secret_key=Settings().JWT_SECRET_KEY,
