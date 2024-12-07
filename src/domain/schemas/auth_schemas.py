@@ -1,4 +1,12 @@
+from datetime import datetime
+
 from pydantic import BaseModel, EmailStr, Field
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str
 
 
 class UserInfo(BaseModel):
@@ -8,34 +16,36 @@ class UserInfo(BaseModel):
     email: str
 
 
-class TokenResponse(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str
-
-
 class RequestPostUserLogin(BaseModel):
     email: str = Field(example="test@test.com")
     password: str = Field(example="qwerty123")
 
-class RequestPostUserLogin_Dev(BaseModel):
+
+class RequestPostUserLogin_dev(BaseModel):
     user_name: str = Field(example="테스트", min_length=2, max_length=30)
 
 
-class LoginResponse(BaseModel):
-    token: TokenResponse = None
-    user: UserInfo = None
+class ResponsePostUserLogin(BaseModel):
+    token: TokenResponse
+    user: UserInfo
 
 
-class RegisterRequest(BaseModel):
+class RequestPostUserRegister(BaseModel):
     user_name: str = Field(example="테스트")
     email: EmailStr = Field(example="test@test.com")
     password: str = Field(example="qwerty123")
 
 
-class RegisterResponse(BaseModel):
-    token: TokenResponse = None
-    user: UserInfo = None
+class ResponsePostUserRegister(BaseModel):
+    user_id: int
+    user_name: str
+    email: EmailStr
+    created_at: datetime
+    updated_at: datetime
+
+
+##############################################
+
 
 
 class SetPasswordRequest(BaseModel):

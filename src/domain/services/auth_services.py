@@ -3,37 +3,27 @@ from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, MultipleResultsFound, NoResultFound
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
+from zoneinfo import ZoneInfo
 
 from config import Settings
-from domain.schemas.auth_schemas import RequestPostUserLogin_Dev
+from domain.schemas.auth_schemas import (
+    RequestPostUserLogin_dev,
+    RequestPostUserRegister,
+    ResponsePostUserLogin,
+    ResponsePostUserRegister,
+)
 from domain.services.exceptions import UserNotFoundException
 from domain.services.token_services import create_user_tokens
 from repositories.models import User
+from utils.common_utils import validate_unique
 
 
-def validate_unique(type: str, value: str, db: Session):
-    # type은 email 혹은 user_name. 즉 검증하고 싶은 타입이 들어옴
-    # value는 요청하고자 하는 데이터 값
-    user_attr = getattr(User, type)
-
-    stmt = select(User).where(user_attr == value)
-    try:
-        v = db.execute(stmt).scalar_one_or_none()
-        if v is not None:  # 새로 추가할 데이터이기에 db에 존재한다면
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"{type} already exists"
-            )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Unexpected error occurred during service: {str(e)}"
-        )
-    return True
-
-
-async def service_register(request, db: Session):
+async def service_register(
+    request: RequestPostUserRegister,
+    db: AsyncSession
+) -> ResponsePostUserRegister:
 
     # 이메일 중복 체크
     validate_unique("email", request.email, db)
@@ -41,41 +31,39 @@ async def service_register(request, db: Session):
     # 사용자 이름 중복 체크
     validate_unique("user_name", request.user_name, db)
 
-    hashed_password = Settings.PWD_CONTEXT.hash(request.password)
-
-    current_time = datetime.now(timezone.utc) + timedelta(hours=9)
+    current_time = datetime.now(ZoneInfo("Asia/Seoul"))
 
     user = User(
         email=request.email,
         user_name=request.user_name,
-        password=hashed_password,
         created_at=current_time,
         updated_at=current_time,
         is_active=False
     )
 
     db.add(user)
-    db.commit()
-    db.refresh(user)
-    return {
-        "user": {
-            "id": user.id,
-            "user_name": user.user_name,
-            "is_active": user.is_active,
-            "email": user.email,
-            "created_at": current_time,
-            "updated_at": current_time,
-        }
-    }
+    await db.commit()
+    await db.refresh(user)
+
+    response = ResponsePostUserRegister(
+        user_id=user.id,
+        user_name=user.user_name,
+        email=user.email,
+        created_at=user.created_at,
+        updated_at=user.updated_at
+    )
+
+    return response
 
 
 async def service_login_with_username(
-    request: RequestPostUserLogin_Dev,
-    db: Session
-):
+    request: RequestPostUserLogin_dev,
+    db: AsyncSession
+) -> ResponsePostUserLogin:
     stmt = select(User).where(User.user_name == request.user_name)
     try:
-        user = db.execute(stmt).scalar_one()
+        result = await db.execute(stmt)
+        user = result.scalar_one()
 
     except NoResultFound as e:
         raise UserNotFoundException() from e

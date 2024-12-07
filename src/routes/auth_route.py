@@ -1,14 +1,15 @@
 from fastapi import APIRouter, Depends, status
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from config import Settings
 from dependencies import get_current_user, get_db
 from domain.schemas.auth_schemas import (
-    RequestPostUserLogin,
-    LoginResponse,
-    RegisterRequest,
-    RegisterResponse,
+    RequestPostUserLogin_dev,
+    RequestPostUserRegister,
     ResetPasswordRequest,
+    ResponsePostUserLogin,
+    ResponsePostUserRegister,
     SetPasswordRequest,
     UserInfo,
 )
@@ -30,7 +31,7 @@ settings = Settings()
 
 @router.post(
     "/register",
-    response_model=RegisterResponse,
+    response_model=ResponsePostUserRegister,
     status_code=status.HTTP_201_CREATED,
     summary="신규 사용자 등록",
     description="""신규 사용자 등록""",
@@ -41,16 +42,16 @@ settings = Settings()
     }
 )
 async def register(
-    request: RegisterRequest,
-    db: Session = Depends(get_db)
-):
-    result = service_register(request, db)
+    request: RequestPostUserRegister,
+    db: AsyncSession = Depends(get_db)
+) -> ResponsePostUserRegister:
+    result = await service_register(request, db)
     return result
 
 
 @router.post(
     "/login",
-    response_model=LoginResponse,
+    response_model=ResponsePostUserLogin,
     status_code=status.HTTP_200_OK,
     summary="사용자 로그인",
     description="""사용자 로그인""",
@@ -63,8 +64,8 @@ async def register(
     }
 )
 async def login(
-    request: RequestPostUserLogin,
-    db: Session = Depends(get_db)
+    request: RequestPostUserLogin_dev,
+    db: AsyncSession = Depends(get_db)
 ):
     if settings.ENVIRONMENT == "development":
         result = await service_login_with_username(request, db)
