@@ -34,7 +34,7 @@ async def get_current_user(token=Header(None), db: Session = Depends(get_db)):
 
     if user is None:
         raise credentials_exception
-    if not user.is_valid:
+    if not user.is_verified:
         raise credentials_exception
     return user
 
