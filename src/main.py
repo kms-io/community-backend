@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi_mail import ConnectionConfig
 
 from config import Settings
 from routes.auth_route import router as auth_router
@@ -10,11 +9,11 @@ settings = Settings()
 
 
 app = FastAPI(
-    title="헬스커뮤 API",
-    description="헬스커뮤 API 서버입니다.",
+    title="kms-io community API",
+    description="This is just a simple API server for kms-io community.",
     version="0.1.0",
     contact={
-        "name": "MoonSu",
+        "name": "Moonsu Kang",
         "url": "https://github.com/sounmu",
         "email": "sukkang_@korea.ac.kr"
     },
