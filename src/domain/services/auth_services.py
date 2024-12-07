@@ -1,12 +1,14 @@
 from datetime import datetime, timedelta, timezone
 
-from domain.services.token_services import create_user_tokens
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import NoResultFound, MultipleResultsFound, IntegrityError
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError, MultipleResultsFound, NoResultFound
+from sqlalchemy.orm import Session
 
 from config import Settings
+from domain.schemas.auth_schemas import RequestPostUserLogin_Dev
+from domain.services.exceptions import UserNotFoundException
+from domain.services.token_services import create_user_tokens
 from repositories.models import User
 
 
@@ -31,7 +33,7 @@ def validate_unique(type: str, value: str, db: Session):
     return True
 
 
-def register(request, db: Session):
+async def service_register(request, db: Session):
 
     # 이메일 중복 체크
     validate_unique("email", request.email, db)
@@ -67,46 +69,34 @@ def register(request, db: Session):
     }
 
 
-def login(request, db: Session):
-    stmt = select(User).where(User.email == request.email)
+async def service_login_with_username(
+    request: RequestPostUserLogin_Dev,
+    db: Session
+):
+    stmt = select(User).where(User.user_name == request.user_name)
     try:
         user = db.execute(stmt).scalar_one()
-    except NoResultFound:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User is not exists"
-        )
 
-    is_valid = Settings.PWD_CONTEXT.verify(request.password, user.password)
-
-    user_info_required = False
-
-    if not is_valid:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password is invalid"
-        )
+    except NoResultFound as e:
+        raise UserNotFoundException() from e
 
     token_response = create_user_tokens(user.id)
 
-    if user_info_required:
-        return {
-            "token": token_response,
-            "user_info_required": True
+    return {
+        "token": token_response,
+        "user": {
+            "id": user.id,
+            "user_name": user.user_name,
+            "is_active": user.is_active,
+            "email": user.email
         }
-    else:
-        return {
-            "token": token_response,
-            "user": {
-                "id": user.id,
-                "user_name": user.user_name,
-                "is_active": user.is_active,
-                "email": user.email
-            }
-        }
+    }
+
+async def service_login_with_firebase(request, db: Session):
+    pass
 
 
-def set_password(user_id, request, db: Session):
+async def service_set_password(user_id, request, db: Session):
     stmt = select(User).where(User.id == user_id)
     try:
         user = db.execute(stmt).scalar_one
@@ -114,7 +104,7 @@ def set_password(user_id, request, db: Session):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="User is not exists"
-        )
+        ) from None
 
     if request.old_password != request.confirm_old_password:
         raise HTTPException(
@@ -151,7 +141,7 @@ def set_password(user_id, request, db: Session):
         return user
 
 
-def reset_password(user_id, request, db: Session):
+async def service_reset_password(user_id, request, db: Session):
     stmt = select(User).where(User.id == user_id)
 
     try:

@@ -1,17 +1,23 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
-import domain.services.auth_services as auth_service
 from config import Settings
 from dependencies import get_current_user, get_db
 from domain.schemas.auth_schemas import (
-    LoginRequest,
+    RequestPostUserLogin,
     LoginResponse,
     RegisterRequest,
     RegisterResponse,
     ResetPasswordRequest,
     SetPasswordRequest,
     UserInfo,
+)
+from domain.services.auth_services import (
+    service_login_with_firebase,
+    service_login_with_username,
+    service_register,
+    service_reset_password,
+    service_set_password,
 )
 
 router = APIRouter(
@@ -29,14 +35,16 @@ settings = Settings()
     summary="신규 사용자 등록",
     description="""신규 사용자 등록""",
     response_description={
-        status.HTTP_201_CREATED: {"description": "User created"}
+        status.HTTP_201_CREATED: {"description": "User created"},
+        status.HTTP_400_BAD_REQUEST: {"description": "Bad request"},
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
     }
 )
 async def register(
     request: RegisterRequest,
     db: Session = Depends(get_db)
 ):
-    result = auth_service.register(request, db)
+    result = service_register(request, db)
     return result
 
 
@@ -47,14 +55,21 @@ async def register(
     summary="사용자 로그인",
     description="""사용자 로그인""",
     response_description={
-        status.HTTP_200_OK: {"description": "User logined"}
+        status.HTTP_200_OK: {"description": "User logined"},
+        status.HTTP_400_BAD_REQUEST: {"description": "Bad request"},
+        status.HTTP_401_UNAUTHORIZED: {"description": "Unauthorized"},
+        status.HTTP_404_NOT_FOUND: {"description": "User not found"},
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"}
     }
 )
 async def login(
-    request: LoginRequest,
+    request: RequestPostUserLogin,
     db: Session = Depends(get_db)
 ):
-    result = auth_service.login(request, db)
+    if settings.ENVIRONMENT == "development":
+        result = await service_login_with_username(request, db)
+    elif settings.ENVIRONMENT == "production":
+        result = await service_login_with_firebase(request, db)
     return result
 
 
@@ -73,7 +88,7 @@ async def set_password(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    result = auth_service.set_password(current_user.id, request, db)
+    result = service_set_password(current_user.id, request, db)
     return result
 
 
@@ -92,5 +107,5 @@ async def reset_password(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    result = auth_service.reset_password(current_user.id, request, db)
+    result = service_reset_password(current_user.id, request, db)
     return result
