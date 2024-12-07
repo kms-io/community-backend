@@ -1,10 +1,18 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
-import domain.schemas.auth_schemas as auth_schemas
 import domain.services.auth_services as auth_service
 from config import Settings
 from dependencies import get_current_user, get_db
+from domain.schemas.auth_schemas import (
+    LoginRequest,
+    LoginResponse,
+    RegisterRequest,
+    RegisterResponse,
+    ResetPasswordRequest,
+    SetPasswordRequest,
+    UserInfo,
+)
 
 router = APIRouter(
     prefix="/auth",
@@ -16,7 +24,7 @@ settings = Settings()
 
 @router.post(
     "/register",
-    response_model=auth_schemas.RegisterResponse,
+    response_model=RegisterResponse,
     status_code=status.HTTP_201_CREATED,
     summary="신규 사용자 등록",
     description="""신규 사용자 등록""",
@@ -25,7 +33,7 @@ settings = Settings()
     }
 )
 async def register(
-    request: auth_schemas.RegisterRequest,
+    request: RegisterRequest,
     db: Session = Depends(get_db)
 ):
     result = auth_service.register(request, db)
@@ -34,7 +42,7 @@ async def register(
 
 @router.post(
     "/login",
-    response_model=auth_schemas.LoginResponse,
+    response_model=LoginResponse,
     status_code=status.HTTP_200_OK,
     summary="사용자 로그인",
     description="""사용자 로그인""",
@@ -43,7 +51,7 @@ async def register(
     }
 )
 async def login(
-    request: auth_schemas.LoginRequest,
+    request: LoginRequest,
     db: Session = Depends(get_db)
 ):
     result = auth_service.login(request, db)
@@ -52,7 +60,7 @@ async def login(
 
 @router.put(
     "/set-password",
-    response_model=auth_schemas.UserInfo,
+    response_model=UserInfo,
     status_code=status.HTTP_200_OK,
     summary="사용자 비밀번호 재설정",
     description="""사용자 비밀번호 재설정""",
@@ -61,7 +69,7 @@ async def login(
     }
 )
 async def set_password(
-    request: auth_schemas.SetPasswordRequest,
+    request: SetPasswordRequest,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
@@ -71,7 +79,7 @@ async def set_password(
 
 @router.put(
     "/reset-password",
-    response_model=auth_schemas.UserInfo,
+    response_model=UserInfo,
     status_code=status.HTTP_200_OK,
     summary="사용자 비밀번호 초기화",
     description="""사용자 비밀번호 초기화""",
@@ -80,7 +88,7 @@ async def set_password(
     }
 )
 async def reset_password(
-    request: auth_schemas.ResetPasswordRequest,
+    request: ResetPasswordRequest,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
