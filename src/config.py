@@ -1,6 +1,7 @@
 import os
 from typing import ClassVar
 
+import sshtunnel
 from dotenv import load_dotenv
 from passlib.context import CryptContext
 from pydantic_settings import BaseSettings
@@ -32,3 +33,23 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+def create_ssh_tunnel():
+    try:
+        tunnel = sshtunnel.SSHTunnelForwarder(
+            ('52.79.###.###', 22),  # EC2 endpoint
+            ssh_username='ubuntu',
+            ssh_pkey='kms-io.pem',  # SSH private key path
+            remote_bind_address=('kms-io-db.####.ap-northeast-2.rds.amazonaws.com', 3306),  # RDS endpoint
+            local_bind_address=('localhost', 13306)
+        )
+        tunnel.start()
+        # Update DB port to use tunnel
+        settings.DB_PORT = 13306
+        settings.DB_HOST = 'localhost'
+        return tunnel
+    except Exception as e:
+        print(f"Failed to create SSH tunnel: {e}")
+        return None
+
+ssh_tunnel = create_ssh_tunnel()
